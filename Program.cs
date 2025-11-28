@@ -59,9 +59,8 @@ async Task HandleUpdateAsync(ITelegramBotClient client, Update update, Cancellat
     {
         await client.SendMessage(
             chatId: message.Chat.Id,
-            text: "Привет! Пришли мне текст или фотографию — я отвечу QR-кодом.",
+            text: "Привет! Пришли мне текст — я отвечу QR-кодом.",
             cancellationToken: cancellationToken);
-
         return;
     }
 
@@ -72,23 +71,10 @@ async Task HandleUpdateAsync(ITelegramBotClient client, Update update, Cancellat
         return;
     }
 
-    if (message.Photo is { Length: > 0 })
-    {
-        // Пользователь прислал фото. Берём самый большой вариант (последний в массиве)
-        _ = message.Photo.Last();
-
-        var sentAt = message.Date.ToUniversalTime();
-        var description = $"Photo from user {message.From?.Id ?? 0} at {sentAt:yyyy-MM-dd HH:mm:ss} UTC";
-
-        // Генерируем QR-код с описанием фото и отправляем
-        await SendQrImageAsync(client, message.Chat.Id, description, cancellationToken);
-        return;
-    }
-
     // Другие типы сообщений не поддерживаются
     await client.SendMessage(
         chatId: message.Chat.Id,
-        text: "Я понимаю только текст и фотографии 🙃",
+        text: "Я понимаю только текст 🙃",
         cancellationToken: cancellationToken);
 }
 
@@ -97,8 +83,8 @@ Task HandleErrorAsync(ITelegramBotClient client, Exception exception, Cancellati
 {
     var errorMessage = exception switch
     {
-        ApiRequestException apiRequestException
-            => $"Telegram API Error:\n[{apiRequestException.ErrorCode}] {apiRequestException.Message}",
+        ApiRequestException apiRequestException =>
+            $"Telegram API Error:\n[{apiRequestException.ErrorCode}] {apiRequestException.Message}",
         _ => exception.ToString()
     };
 
