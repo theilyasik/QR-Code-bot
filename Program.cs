@@ -1,10 +1,9 @@
-using QRCoder;
+﻿using QRCoder;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.InputFiles;
 
 // Читаем токен бота из переменной окружения
 var token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
@@ -32,9 +31,10 @@ var receiverOptions = new ReceiverOptions
     AllowedUpdates = Array.Empty<UpdateType>()
 };
 
+// Стартуем long polling
 botClient.StartReceiving(HandleUpdateAsync, HandleErrorAsync, receiverOptions, cancellationToken: cts.Token);
 
-var me = await botClient.GetMeAsync();
+var me = await botClient.GetMe();
 Console.WriteLine($"Бот @{me.Username} запущен. Нажмите Ctrl+C для остановки.");
 
 try
@@ -57,10 +57,11 @@ async Task HandleUpdateAsync(ITelegramBotClient client, Update update, Cancellat
 
     if (message.Text == "/start")
     {
-        await client.SendTextMessageAsync(
+        await client.SendMessage(
             chatId: message.Chat.Id,
             text: "Привет! Пришли мне текст или фотографию — я отвечу QR-кодом.",
             cancellationToken: cancellationToken);
+
         return;
     }
 
@@ -75,6 +76,7 @@ async Task HandleUpdateAsync(ITelegramBotClient client, Update update, Cancellat
     {
         // Пользователь прислал фото. Берём самый большой вариант (последний в массиве)
         _ = message.Photo.Last();
+
         var sentAt = message.Date.ToUniversalTime();
         var description = $"Photo from user {message.From?.Id ?? 0} at {sentAt:yyyy-MM-dd HH:mm:ss} UTC";
 
@@ -84,7 +86,7 @@ async Task HandleUpdateAsync(ITelegramBotClient client, Update update, Cancellat
     }
 
     // Другие типы сообщений не поддерживаются
-    await client.SendTextMessageAsync(
+    await client.SendMessage(
         chatId: message.Chat.Id,
         text: "Я понимаю только текст и фотографии 🙃",
         cancellationToken: cancellationToken);
@@ -95,7 +97,8 @@ Task HandleErrorAsync(ITelegramBotClient client, Exception exception, Cancellati
 {
     var errorMessage = exception switch
     {
-        ApiRequestException apiRequestException => $"Telegram API Error:\n[{apiRequestException.ErrorCode}] {apiRequestException.Message}",
+        ApiRequestException apiRequestException
+            => $"Telegram API Error:\n[{apiRequestException.ErrorCode}] {apiRequestException.Message}",
         _ => exception.ToString()
     };
 
@@ -111,7 +114,7 @@ async Task SendQrImageAsync(ITelegramBotClient client, long chatId, string conte
 
     var file = new InputFileStream(qrStream, "qr-code.png");
 
-    await client.SendPhotoAsync(
+    await client.SendPhoto(
         chatId: chatId,
         photo: file,
         caption: "Вот ваш QR-код",
